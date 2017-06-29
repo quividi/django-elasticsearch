@@ -1,5 +1,7 @@
 import copy
 
+from distutils.version import LooseVersion
+
 from django.conf import settings
 from django.db.models import Model
 from django.db.models.query import QuerySet
@@ -120,6 +122,12 @@ class EsQueryset(QuerySet):
         return len(self._result_cache)
 
     def make_search_body(self):
+        es_version = es_client.info()['version']['number']
+        legacy_mode = LooseVersion(es_version) < LooseVersion('2.0.0')
+
+        filtered_or_bool = 'filtered' if legacy_mode else 'bool'
+        query_or_must = 'query' if legacy_mode else 'must'
+
         body = {}
         query = {}
 
@@ -158,8 +166,8 @@ class EsQueryset(QuerySet):
 
                 if operator == 'in':
                     nested_update(filters,
-                                  {'query': {'filtered': {"filter": {'terms': { field_name: value }}}}})
-                    if len(filters['query']['filtered']["filter"]['terms'].items()) > 1:
+                                  {query_or_must: {filtered_or_bool: {"filter": {'terms': { field_name: value }}}}})
+                    if len(filters[query_or_must][filtered_or_bool]["filter"]['terms'].items()) > 1:
                         raise NotImplementedError("multi_terms is not implemented.")
                 elif operator == 'contains':
                     nested_update(filters,
@@ -195,9 +203,9 @@ class EsQueryset(QuerySet):
 
                     nested_update(filters, {'filter': {'bool': filtr}})
 
-            body = {'query': {'filtered': filters}}
+            body = {'query': {filtered_or_bool: filters}}
             if query:
-                body['query']['filtered']['query'] = query
+                body['query'][filtered_or_bool][query_or_must] = query
         else:
             if query:
                 body = {'query': query}

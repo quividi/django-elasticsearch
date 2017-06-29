@@ -295,7 +295,7 @@ class ElasticsearchManager():
             # TODO: could be done once for every index/doc_type ?
             full_mapping = es_client.indices.get_mapping(index=self.index,
                                                          doc_type=self.doc_type)
-            self._mapping = full_mapping[self.index]['mappings'][self.doc_type]['properties']
+            self._mapping = full_mapping[self.index]['mappings'][self.doc_type].get('properties', {})
 
         return self._mapping
 
