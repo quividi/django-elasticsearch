@@ -1,5 +1,9 @@
+from __future__ import absolute_import
+
 import json
 import datetime
+
+import six
 
 from django.db.models import FieldDoesNotExist
 from django.db.models.fields.related import ManyToManyField
@@ -81,7 +85,7 @@ class EsJsonToModelMixin(object):
         Returns a model instance
         """
         attrs = {}
-        for k, v in source.iteritems():
+        for k, v in six.iteritems(source):
             try:
                 attrs[k] = self.deserialize_field(source, k)
             except (AttributeError, FieldDoesNotExist):
@@ -145,7 +149,7 @@ class EsModelToJsonMixin(object):
             return obj
 
         # Fallback on a dict with id + __unicode__ value of the related model instance.
-        return dict(id=rel.pk, value=unicode(rel))
+        return dict(id=rel.pk, value=six.text_type(rel))
 
     def format(self, instance):
         # from a model instance to a dict

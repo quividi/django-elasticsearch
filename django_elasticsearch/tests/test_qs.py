@@ -1,6 +1,13 @@
+from __future__ import absolute_import
+
 import time
 import mock
 from datetime import datetime, timedelta
+
+try:
+    from importlib import reload
+except ImportError:
+    pass
 
 from django.test import TestCase
 from django.test.utils import override_settings

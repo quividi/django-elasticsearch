@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
+
+from __future__ import absolute_import
+
 import json
 import importlib
+
+import six
 
 from django.conf import settings
 from django.db.models import FieldDoesNotExist
@@ -80,7 +85,7 @@ class ElasticsearchManager():
 
     def get_serializer(self, **kwargs):
         serializer = self.model.Elasticsearch.serializer_class
-        if isinstance(serializer, basestring):
+        if isinstance(serializer, six.string_types):
             module, kls = self.model.Elasticsearch.serializer_class.rsplit(".", 1)
             mod = importlib.import_module(module)
             return getattr(mod, kls)(self.model, **kwargs)

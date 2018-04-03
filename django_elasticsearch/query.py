@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import copy
 
 from distutils.version import LooseVersion
@@ -167,12 +169,12 @@ class EsQueryset(QuerySet):
                 if operator == 'in':
                     nested_update(filters,
                                   {query_or_must: {filtered_or_bool: {"filter": {'terms': { field_name: value }}}}})
-                    if len(filters[query_or_must][filtered_or_bool]["filter"]['terms'].items()) > 1:
+                    if len(list(filters[query_or_must][filtered_or_bool]["filter"]['terms'].items())) > 1:
                         raise NotImplementedError("multi_terms is not implemented.")
                 elif operator == 'contains':
                     nested_update(filters,
                                   {'query': {'match': {field_name: {'query': value}}}})
-                    if len(filters['query']['match'].items()) > 1:
+                    if len(list(filters['query']['match'].items())) > 1:
                         raise NotImplementedError("multi_match is not implemented.")
                 elif operator == 'isnull':
                     if value:
@@ -236,7 +238,7 @@ class EsQueryset(QuerySet):
                 for field in self.facets_fields
             ])
             if self.facets_limit:
-                aggs[field]['terms']['size'] = self.facets_limit
+                aggs[self.facets_fields[-1]]['terms']['size'] = self.facets_limit
 
             if self.global_facets:
                 aggs = {'global_count': {'global': {}, 'aggs': aggs}}
