@@ -44,13 +44,13 @@ class EsJsonToModelMixin(object):
     def nested_deserialize(self, field, source):
         # check for Elasticsearch.serializer on the related model
         if source:
-            if hasattr(field.rel.to, 'Elasticsearch'):
-                serializer = field.rel.to.es.get_serializer()
+            if hasattr(field.remote_field.model, 'Elasticsearch'):
+                serializer = field.remote_field.model.es.get_serializer()
                 obj = serializer.deserialize(source)
                 return obj
             elif 'id' in source and 'value' in source:
                 # id/value fallback
-                return field.rel.to.objects.get(pk=source.get('id'))
+                return field.remote_field.model.objects.get(pk=source.get('id'))
 
     def deserialize_field(self, source, field_name):
         method_name = 'deserialize_{0}'.format(field_name)
@@ -70,7 +70,7 @@ class EsJsonToModelMixin(object):
         if val and typ in ('DateField', 'DateTimeField'):
             return datetime.datetime.strptime(val, '%Y-%m-%dT%H:%M:%S.%f')
 
-        if field.rel:
+        if field.remote_field:
             # M2M
             if isinstance(field, ManyToManyField):
                 raise AttributeError
@@ -119,7 +119,7 @@ class EsModelToJsonMixin(object):
             if hasattr(self, field_type_method_name):
                 return getattr(self, field_type_method_name)(instance, field_name)
 
-            if field.rel:
+            if field.remote_field:
                 # M2M
                 if isinstance(field, ManyToManyField):
                     return [self.nested_serialize(r)
