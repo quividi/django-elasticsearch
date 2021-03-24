@@ -21,7 +21,6 @@ class EsQueryset(QuerySet):
     def __init__(self, model, fuzziness=None):
         self.model = model
         self.index = model.es.index
-        self.doc_type = model.es.doc_type
 
         # config
         self.mode = self.MODE_SEARCH
@@ -257,7 +256,6 @@ class EsQueryset(QuerySet):
 
         search_params = {
             'index': self.index,
-            'doc_type': self.doc_type
         }
         if self._start:
             search_params['from'] = self._start
@@ -381,7 +379,6 @@ class EsQueryset(QuerySet):
             raise AttributeError("EsQueryset.get needs to get passed a 'pk' or 'id' parameter.")
 
         r = es_client.get(index=self.index,
-                          doc_type=self.doc_type,
                           id=pk)
         self._response = r
 
@@ -436,7 +433,6 @@ class EsQueryset(QuerySet):
         else:
             r = es_client.count(
                 index=self.index,
-                doc_type=self.doc_type,
                 body=self.make_search_body() or None)
             self._total = r['count']
         return self._total
