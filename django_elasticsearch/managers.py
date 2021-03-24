@@ -1,15 +1,13 @@
 # -*- coding: utf-8 -*-
+
+from __future__ import absolute_import
+
 import json
-try:
-    import importlib
-except ImportError:  # python < 2.7
-    from django.utils import importlib
+import importlib
+
+import six
 
 from django.conf import settings
-try:
-    from django.utils import importlib
-except:
-    import importlib
 from django.db.models import FieldDoesNotExist
 
 from django_elasticsearch.query import EsQueryset
@@ -87,7 +85,7 @@ class ElasticsearchManager():
 
     def get_serializer(self, **kwargs):
         serializer = self.model.Elasticsearch.serializer_class
-        if isinstance(serializer, basestring):
+        if isinstance(serializer, six.string_types):
             module, kls = self.model.Elasticsearch.serializer_class.rsplit(".", 1)
             mod = importlib.import_module(module)
             return getattr(mod, kls)(self.model, **kwargs)
@@ -255,26 +253,28 @@ class ElasticsearchManager():
 
         for field_name in self.get_fields():
             try:
-                field = self.model._meta.get_field(field_name)
-            except FieldDoesNotExist:
-                # abstract field
-                mapping = {}
-            else:
-                mapping = {'type': ELASTICSEARCH_FIELD_MAP.get(
-                    field.get_internal_type(), 'string')}
+                mapping = self.model.Elasticsearch.mappings[field_name]
+            except (AttributeError, KeyError):
+                mapping = None
+            if mapping:
+                mappings[field_name] = mapping
+
             try:
                 # if an analyzer is set as default, use it.
                 # TODO: could be also tokenizer, filter, char_filter
-                if mapping['type'] == 'string':
-                    analyzer = settings.ELASTICSEARCH_SETTINGS['analysis']['default']
-                    mapping['analyzer'] = analyzer
+                try:
+                    field = self.model._meta.get_field(field_name)
+                except FieldDoesNotExist:
+                    # abstract field
+                    pass
+                else:
+                    mtype = ELASTICSEARCH_FIELD_MAP.get(field.get_internal_type(), 'string')
+                    if mtype == 'string':
+                        analyzer = settings.ELASTICSEARCH_SETTINGS['analysis']['default']
+                        mapping['type'] = 'string'
+                        mapping['analyzer'] = analyzer
             except (ValueError, AttributeError, KeyError, TypeError):
                 pass
-            try:
-                mapping.update(self.model.Elasticsearch.mappings[field_name])
-            except (AttributeError, KeyError, TypeError):
-                pass
-            mappings[field_name] = mapping
 
         # add a completion mapping for every auto completable field
         fields = self.model.Elasticsearch.completion_fields or []
@@ -293,7 +293,7 @@ class ElasticsearchManager():
             # TODO: could be done once for every index/doc_type ?
             full_mapping = es_client.indices.get_mapping(index=self.index,
                                                          doc_type=self.doc_type)
-            self._mapping = full_mapping[self.index]['mappings'][self.doc_type]['properties']
+            self._mapping = full_mapping[self.index]['mappings'][self.doc_type].get('properties', {})
 
         return self._mapping
 

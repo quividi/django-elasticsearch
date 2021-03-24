@@ -1,8 +1,11 @@
+
 import collections
+
+import six
 
 
 def nested_update(d, u):
-    for k, v in u.iteritems():
+    for k, v in six.iteritems(u):
         if isinstance(v, collections.Mapping):
             r = nested_update(d.get(k, {}), v)
             d[k] = r
@@ -20,4 +23,4 @@ def dict_depth(d, depth=0):
     if not isinstance(d, dict) or not d:
         return depth
     return max(dict_depth(v, depth + 1)
-               for k, v in d.iteritems())
+               for k, v in six.iteritems(d))

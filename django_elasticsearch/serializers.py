@@ -1,5 +1,9 @@
+from __future__ import absolute_import
+
 import json
 import datetime
+
+import six
 
 from django.db.models import FieldDoesNotExist
 from django.db.models.fields.related import ManyToManyField
@@ -40,13 +44,13 @@ class EsJsonToModelMixin(object):
     def nested_deserialize(self, field, source):
         # check for Elasticsearch.serializer on the related model
         if source:
-            if hasattr(field.rel.to, 'Elasticsearch'):
-                serializer = field.rel.to.es.get_serializer()
+            if hasattr(field.remote_field.model, 'Elasticsearch'):
+                serializer = field.remote_field.model.es.get_serializer()
                 obj = serializer.deserialize(source)
                 return obj
             elif 'id' in source and 'value' in source:
                 # id/value fallback
-                return field.rel.to.objects.get(pk=source.get('id'))
+                return field.remote_field.model.objects.get(pk=source.get('id'))
 
     def deserialize_field(self, source, field_name):
         method_name = 'deserialize_{0}'.format(field_name)
@@ -66,7 +70,7 @@ class EsJsonToModelMixin(object):
         if val and typ in ('DateField', 'DateTimeField'):
             return datetime.datetime.strptime(val, '%Y-%m-%dT%H:%M:%S.%f')
 
-        if field.rel:
+        if field.remote_field:
             # M2M
             if isinstance(field, ManyToManyField):
                 raise AttributeError
@@ -81,7 +85,7 @@ class EsJsonToModelMixin(object):
         Returns a model instance
         """
         attrs = {}
-        for k, v in source.iteritems():
+        for k, v in six.iteritems(source):
             try:
                 attrs[k] = self.deserialize_field(source, k)
             except (AttributeError, FieldDoesNotExist):
@@ -115,7 +119,7 @@ class EsModelToJsonMixin(object):
             if hasattr(self, field_type_method_name):
                 return getattr(self, field_type_method_name)(instance, field_name)
 
-            if field.rel:
+            if field.remote_field:
                 # M2M
                 if isinstance(field, ManyToManyField):
                     return [self.nested_serialize(r)
@@ -145,7 +149,7 @@ class EsModelToJsonMixin(object):
             return obj
 
         # Fallback on a dict with id + __unicode__ value of the related model instance.
-        return dict(id=rel.pk, value=unicode(rel))
+        return dict(id=rel.pk, value=six.text_type(rel))
 
     def format(self, instance):
         # from a model instance to a dict

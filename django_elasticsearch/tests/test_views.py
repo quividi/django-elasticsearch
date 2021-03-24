@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import mock
 import json
 
@@ -26,7 +28,7 @@ class EsViewTestCase(TestCase):
 
     def _test_detail_view(self):
         response = self.client.get('/tests/{id}/'.format(id=self.instance.pk))
-        content = json.loads(response.content)
+        content = json.loads(response.content.decode('utf-8'))
         self.assertEqual(content['fields']['first_name'], u"woot")
         self.assertEqual(content['fields']['last_name'], u"foo")
 
@@ -44,7 +46,7 @@ class EsViewTestCase(TestCase):
 
     def _test_list_view(self):
         response = self.client.get('/tests/')
-        content = json.loads(response.content)
+        content = json.loads(response.content.decode('utf-8'))
         self.assertEqual(content[0]['fields']['first_name'], u"woot")
         self.assertEqual(content[0]['fields']['last_name'], u"foo")
 
@@ -55,7 +57,7 @@ class EsViewTestCase(TestCase):
         with mock.patch('django_elasticsearch.query.EsQueryset.do_search') as mock_search:
             mock_search.side_effect = TransportError()
             response = self.client.get('/tests/')
-            content = json.loads(response.content)
+            content = json.loads(response.content.decode('utf-8'))
             self.assertEqual(len(content), 1)
             self.assertEqual(content[0]['fields']['first_name'], u"woot")
             self.assertEqual(content[0]['fields']['last_name'], u"foo")

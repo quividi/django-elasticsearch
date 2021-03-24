@@ -228,8 +228,7 @@ EsQueryset API:
 ---------------
 This class is as close as possible to a standard relational db Queryset, however the db operations (update and delete) are deactivated (i'm open for discussion on if and how to implement these). Note that just like regular Querysets, EsQuerysets are lazy, they can be ordered, filtered and faceted.  
 
-Note that the return value of the queryset is higly dependent on your mapping, for example, if you want to be able to do an exact filtering with filter() you need a field with {"index" : "not_analyzed"}.
-Also by default, filters are case insensitive, if you have a case sensitive tokenizer, you need to instantiate EsQueryset with ignore_case=False.
+Note that the return value of the queryset is higly dependent on your mapping, for example, if you want to be able to do an exact filtering on a string with filter() you need a field with {"index" : "not_analyzed"}.
 
 An EsQueryset acts a lot like a regular Queryset:
 ```
@@ -270,7 +269,7 @@ Note that es.search automatically add the default facets set on the model to the
 * **es.queryset.order_by**(**kwargs)  
   
 * **es.queryset.filter**(**kwargs)  
-    Accepted lookups are: __exact, __should, __contains, __gt, __gte, __lt, __lte, __range  
+    Accepted lookups are: __exact, __should, __contains, __in, __gt, __gte, __lt, __lte, __range  
     Just like in django, the default lookup is __exact.  
     See the [bool query](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-bool-query.html) for a difference between __exact (which maps to 'must') and __should.  
   

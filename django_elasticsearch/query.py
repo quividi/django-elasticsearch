@@ -1,4 +1,8 @@
+from __future__ import absolute_import
+
 import copy
+
+from distutils.version import LooseVersion
 
 from django.conf import settings
 from django.db.models import Model
@@ -120,8 +124,14 @@ class EsQueryset(QuerySet):
         return len(self._result_cache)
 
     def make_search_body(self):
+        es_version = es_client.info()['version']['number']
+        legacy_mode = LooseVersion(es_version) < LooseVersion('2.0.0')
+
+        filtered_or_bool = 'filtered' if legacy_mode else 'bool'
+        query_or_must = 'query' if legacy_mode else 'must'
+
         body = {}
-        search = {}
+        query = {}
 
         if self.fuzziness is None:  # beware, could be 0
             fuzziness = getattr(settings, 'ELASTICSEARCH_FUZZINESS', 0.5)
@@ -129,7 +139,7 @@ class EsQueryset(QuerySet):
             fuzziness = self.fuzziness
 
         if self._query:
-            search['query'] = {
+            query = {
                 'match': {
                     '_all': {
                         'query': self._query,
@@ -140,15 +150,10 @@ class EsQueryset(QuerySet):
 
         if self.filters:
             # TODO: should we add _cache = true ?!
-            search['filter'] = {}
+            filters = {}
             mapping = self.model.es.get_mapping()
 
             for field, value in self.filters.items():
-                try:
-                    value = value.lower()
-                except AttributeError:
-                    pass
-
                 field, operator = self.sanitize_lookup(field)
 
                 try:
@@ -161,38 +166,51 @@ class EsQueryset(QuerySet):
                 if is_nested and isinstance(value, Model):
                     value = value.id
 
-                if operator == 'exact':
-                    filtr = {'bool': {'must': [{'term': {field_name: value}}]}}
-
-                elif operator == 'not':
-                    filtr = {'bool': {'must_not': [{'term': {field_name: value}}]}}
-
-                elif operator == 'should':
-                    filtr = {'bool': {operator: [{'term': {field_name: value}}]}}
-
+                if operator == 'in':
+                    nested_update(filters,
+                                  {query_or_must: {filtered_or_bool: {"filter": {'terms': { field_name: value }}}}})
+                    if len(list(filters[query_or_must][filtered_or_bool]["filter"]['terms'].items())) > 1:
+                        raise NotImplementedError("multi_terms is not implemented.")
                 elif operator == 'contains':
-                    filtr = {'query': {'match': {field_name: {'query': value}}}}
-
-                elif operator in ['gt', 'gte', 'lt', 'lte']:
-                    filtr = {'bool': {'must': [{'range': {field_name: {
-                        operator: value}}}]}}
-
-                elif operator == 'range':
-                    filtr = {'bool': {'must': [{'range': {field_name: {
-                        'gte': value[0],
-                        'lte': value[1]}}}]}}
-
+                    nested_update(filters,
+                                  {'query': {'match': {field_name: {'query': value}}}})
+                    if len(list(filters['query']['match'].items())) > 1:
+                        raise NotImplementedError("multi_match is not implemented.")
                 elif operator == 'isnull':
                     if value:
                         filtr = {'missing': {'field': field_name}}
                     else:
                         filtr = {'exists': {'field': field_name}}
 
-                nested_update(search['filter'], filtr)
+                    nested_update(filters, {'filter': filtr})
 
-            body['query'] = {'filtered': search}
+                else:
+                    if operator == 'exact':
+                        filtr = {'must': [{'term': {field_name: value}}]}
+
+                    elif operator == 'not':
+                        filtr = {'must_not': [{'term': {field_name: value}}]}
+
+                    elif operator == 'should':
+                        filtr = {operator: [{'term': {field_name: value}}]}
+
+                    elif operator in ['gt', 'gte', 'lt', 'lte']:
+                        filtr = {'must': [{'range': {field_name: {
+                            operator: value}}}]}
+
+                    elif operator == 'range':
+                        filtr = {'must': [{'range': {field_name: {
+                            'gte': value[0],
+                            'lte': value[1]}}}]}
+
+                    nested_update(filters, {'filter': {'bool': filtr}})
+
+            body = {'query': {filtered_or_bool: filters}}
+            if query:
+                body['query'][filtered_or_bool][query_or_must] = query
         else:
-            body = search
+            if query:
+                body = {'query': query}
 
         return body
 
@@ -220,7 +238,7 @@ class EsQueryset(QuerySet):
                 for field in self.facets_fields
             ])
             if self.facets_limit:
-                aggs[field]['terms']['size'] = self.facets_limit
+                aggs[self.facets_fields[-1]]['terms']['size'] = self.facets_limit
 
             if self.global_facets:
                 aggs = {'global_count': {'global': {}, 'aggs': aggs}}
@@ -318,7 +336,7 @@ class EsQueryset(QuerySet):
         return clone
 
     def sanitize_lookup(self, lookup):
-        valid_operators = ['exact', 'not', 'should', 'range', 'gt', 'lt', 'gte', 'lte', 'contains', 'isnull']
+        valid_operators = ['exact', 'not', 'should', 'range', 'gt', 'lt', 'gte', 'lte', 'contains', 'in', 'isnull']
         words = lookup.split('__')
         fields = [word for word in words if word not in valid_operators]
         # this is also django's default lookup type

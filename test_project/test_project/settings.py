@@ -19,7 +19,7 @@ class DisableMigrations(object):
         return True
 
     def __getitem__(self, item):
-        return "notmigrations"
+        return None
 
 MIGRATION_MODULES = DisableMigrations()
 
@@ -137,7 +137,6 @@ TEMPLATE_DIRS = (
 INSTALLED_APPS = (
     'django.contrib.auth',
     'django.contrib.contenttypes',
-    'django_extensions',
     'django_elasticsearch',
     'test_app'
 )

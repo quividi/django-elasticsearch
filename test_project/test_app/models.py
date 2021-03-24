@@ -26,7 +26,9 @@ class TestModel(User, EsIndexable):
         index = 'django-test'
         doc_type = 'test-doc-type'
         mappings = {
-            "username": {"index": "not_analyzed"},
+            "username": {
+                "type": "string",
+                "index": "not_analyzed"},
             "date_joined_exp": {"type": "object"}
         }
         serializer_class = TestSerializer
@@ -72,7 +74,7 @@ class Test2Model(EsIndexable):
     filef = models.FileField(null=True, upload_to='f/')
     # img = models.ImageField(null=True)  # would need pillow
     filepf = models.FilePathField(null=True)
-    ipaddr = models.IPAddressField(null=True)
+    ipaddr = models.GenericIPAddressField(null=True)
     genipaddr = models.GenericIPAddressField(null=True)
     slug = models.SlugField(null=True)
     url = models.URLField(null=True)
@@ -100,9 +102,9 @@ class Test2Model(EsIndexable):
     timef = models.TimeField(null=True)
 
     # related
-    fk = models.ForeignKey(Dummy, null=True, related_name="tofk")
-    oto = models.OneToOneField(Dummy, null=True, related_name="toto")
-    fkself = models.ForeignKey('self', null=True, related_name="toselffk")  # a bit of a special case
+    fk = models.ForeignKey(Dummy, null=True, related_name="tofk", on_delete=models.SET_NULL)
+    oto = models.OneToOneField(Dummy, null=True, related_name="toto", on_delete=models.SET_NULL)
+    fkself = models.ForeignKey('self', null=True, related_name="toselffk", on_delete=models.SET_NULL)  # a bit of a special case
     mtm = models.ManyToManyField(Dummy, related_name="tomtm")
 
     class Elasticsearch(EsIndexable.Elasticsearch):
