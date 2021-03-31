@@ -5,7 +5,7 @@ import datetime
 
 import six
 
-from django.db.models import FieldDoesNotExist
+from django.core.exceptions import FieldDoesNotExist
 from django.db.models.fields.related import ManyToManyField
 
 
