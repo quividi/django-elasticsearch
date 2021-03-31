@@ -8,7 +8,7 @@ import importlib
 import six
 
 from django.conf import settings
-from django.db.models import FieldDoesNotExist
+from django.core.exceptions import FieldDoesNotExist
 
 from django_elasticsearch.query import EsQueryset
 from django_elasticsearch.client import es_client
