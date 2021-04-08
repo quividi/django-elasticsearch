@@ -1,7 +1,5 @@
-from __future__ import absolute_import
-
-import mock
 import json
+import mock
 
 from django.test import TestCase
 
@@ -23,7 +21,7 @@ class EsViewTestCase(TestCase):
         TestModel.es.do_update()
 
     def tearDown(self):
-        super(EsViewTestCase, self).tearDown()
+        super().tearDown()
         es_client.indices.delete(index=TestModel.es.get_index())
 
     def _test_detail_view(self):

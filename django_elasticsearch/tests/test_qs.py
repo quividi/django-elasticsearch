@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import time
 import mock
 from datetime import datetime, timedelta
@@ -57,7 +55,7 @@ class EsQuerysetTestCase(TestCase):
         TestModel.es.do_update()
 
     def tearDown(self):
-        super(EsQuerysetTestCase, self).tearDown()
+        super().tearDown()
         es_client.indices.delete(index=TestModel.es.get_index())
 
     def test_all(self):
@@ -115,7 +113,7 @@ class EsQuerysetTestCase(TestCase):
         self.assertEqual(qs.facets['last_name']['buckets'], expected)
 
     def test_suggestions(self):
-        qs = TestModel.es.search('smath').suggest(['last_name',], limit=3)
+        qs = TestModel.es.search('smath').suggest(['last_name', ], limit=3)
         expected = {
             u'last_name': [
                 {u'length': 5,
@@ -151,7 +149,7 @@ class EsQuerysetTestCase(TestCase):
         qes = TestModel.es.all().deserialize()
         self.assertEqual(list(qs), list(qes))
 
-    @withattrs(TestModel.Elasticsearch, 'ordering', ['username',])
+    @withattrs(TestModel.Elasticsearch, 'ordering', ['username', ])
     def test_model_ordering(self):
         qs = TestModel.es.queryset.all()
         contents = qs.deserialize()
@@ -322,7 +320,7 @@ class EsQuerysetTestCase(TestCase):
         self.assertTrue(self.t4 not in contents)
 
     def test_should_lookup(self):
-        contents = TestModel.es.all().filter(first_name__should=u"john", 
+        contents = TestModel.es.all().filter(first_name__should=u"john",
                                              last_name__should=u"bar").deserialize()
         self.assertTrue(self.t1 in contents)
         self.assertTrue(self.t4 in contents)
@@ -356,8 +354,8 @@ class EsQuerysetTestCase(TestCase):
     def test_extra(self):
         q = TestModel.es.search("Jack").extra({
             "highlight": {
-                "fields" : {
-                    "first_name" : {}
+                "fields": {
+                    "first_name": {}
                 }
             }
         })

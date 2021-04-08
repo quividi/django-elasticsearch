@@ -1,15 +1,11 @@
-from __future__ import absolute_import
-
 import json
 import datetime
-
-import six
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models.fields.related import ManyToManyField
 
 
-class EsSerializer(object):
+class EsSerializer:
     def serialize(self, instance):
         raise NotImplementedError()
 
@@ -17,7 +13,7 @@ class EsSerializer(object):
         raise NotImplementedError()
 
 
-class EsDbMixin(object):
+class EsDbMixin:
     """
     Very Naive mixin that deserialize to models
     by doing a db query using ids in the queryset
@@ -29,7 +25,7 @@ class EsDbMixin(object):
         return self.model.objects.filter(**{pk_field.name + '__in': ids})
 
 
-class EsJsonToModelMixin(object):
+class EsJsonToModelMixin:
     """
     Serializer mixin that attempts to instanciate the model
     from the json elasticsearch source
@@ -85,7 +81,7 @@ class EsJsonToModelMixin(object):
         Returns a model instance
         """
         attrs = {}
-        for k, v in six.iteritems(source):
+        for k, v in source.items():
             try:
                 attrs[k] = self.deserialize_field(source, k)
             except (AttributeError, FieldDoesNotExist):
@@ -96,7 +92,7 @@ class EsJsonToModelMixin(object):
         # TODO: we can assign m2ms now
 
 
-class EsModelToJsonMixin(object):
+class EsModelToJsonMixin:
     def __init__(self, model, max_depth=2, cur_depth=1):
         self.model = model
         # used in case of related field on 'self' to avoid infinite loop
@@ -149,13 +145,12 @@ class EsModelToJsonMixin(object):
             return obj
 
         # Fallback on a dict with id + __unicode__ value of the related model instance.
-        return dict(id=rel.pk, value=six.text_type(rel))
+        return dict(id=rel.pk, value=str(rel))
 
     def format(self, instance):
         # from a model instance to a dict
         fields = self.model.es.get_fields()
-        obj = dict([(field, self.serialize_field(instance, field))
-                    for field in fields])
+        obj = {field: self.serialize_field(instance, field) for field in fields}
 
         # adding auto complete fields
         completion_fields = instance.Elasticsearch.completion_fields
@@ -170,8 +165,7 @@ class EsModelToJsonMixin(object):
     def serialize(self, instance):
         return json.dumps(self.format(instance),
                           default=lambda d: (
-                              d.isoformat() if isinstance(d, datetime.datetime)
-                              or isinstance(d, datetime.date) else None))
+                              d.isoformat() if isinstance(d, (datetime.datetime, datetime.date)) else None))
 
 
 class EsJsonSerializer(EsModelToJsonMixin, EsJsonToModelMixin, EsSerializer):

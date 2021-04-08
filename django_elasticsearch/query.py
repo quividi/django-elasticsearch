@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import copy
 
 from distutils.version import LooseVersion
@@ -91,17 +89,17 @@ class EsQueryset(QuerySet):
 
         self.ndx = ndx
 
-        if type(ndx) is slice:
+        if isinstance(ndx, slice):
             self._start = ndx.start or 0  # in case it is None because [:X]
             self._stop = ndx.stop
-        elif type(ndx) is int:
+        elif isinstance(ndx, int):
             self._start = ndx
             self._stop = ndx + 1
 
         self.do_search()
-        if type(ndx) is slice:
+        if isinstance(ndx, slice):
             return self._result_cache
-        elif type(ndx) is int:
+        elif isinstance(ndx, int):
             # Note: 0 because we only fetch the right one
             return self._result_cache[0]
 
@@ -162,13 +160,13 @@ class EsQueryset(QuerySet):
                     # abstract
                     is_nested = False
 
-                field_name = is_nested and field + ".id" or field
+                field_name = field + ".id" if is_nested else field
                 if is_nested and isinstance(value, Model):
                     value = value.id
 
                 if operator == 'in':
                     nested_update(filters,
-                                  {query_or_must: {filtered_or_bool: {"filter": {'terms': { field_name: value }}}}})
+                                  {query_or_must: {filtered_or_bool: {"filter": {'terms': {field_name: value}}}}})
                     if len(list(filters[query_or_must][filtered_or_bool]["filter"]['terms'].items())) > 1:
                         raise NotImplementedError("multi_terms is not implemented.")
                 elif operator == 'contains':
@@ -232,11 +230,10 @@ class EsQueryset(QuerySet):
 
         body = self.make_search_body()
         if self.facets_fields:
-            aggs = dict([
-                (field, {'terms':
-                        {'field': field}})
+            aggs = {
+                field: {'terms': {'field': field}}
                 for field in self.facets_fields
-            ])
+            }
             if self.facets_limit:
                 aggs[self.facets_fields[-1]]['terms']['size'] = self.facets_limit
 
@@ -368,7 +365,7 @@ class EsQueryset(QuerySet):
         clone.filters.update(filters)
         return clone
 
-    ## getters
+    # getters
     def all(self):
         clone = self._clone()
         return clone
@@ -406,7 +403,7 @@ class EsQueryset(QuerySet):
                                      "completion": {
                                          "field": field_name,
                                          # stick to fuzziness settings
-                                         "fuzzy" : {}
+                                         "fuzzy": {}
                                      }}})
 
         return [r['text'] for r in resp[field_name][0]['options']]

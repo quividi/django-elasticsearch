@@ -1,5 +1,3 @@
-
-
 def withattrs(kls, attr, val):
     """
     Decorator that sets given attributes as a context manager

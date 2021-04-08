@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-
-import six
-
 from django.http import Http404
 from django.conf import settings
 
@@ -40,9 +36,11 @@ class ElasticsearchFilterBackend(OrderingFilter, DjangoFilterBackend):
                 ordering = self.get_default_ordering(view)
 
             filterable = getattr(view, 'filter_fields', [])
-            filters = dict([(k, v)
-                            for k, v in six.iteritems(request.GET)
-                            if k in filterable])
+            filters = {
+                k: v
+                for k, v in request.GET.items()
+                if k in filterable
+            }
 
             q = queryset.query(query).filter(**filters)
             if ordering:
@@ -50,26 +48,26 @@ class ElasticsearchFilterBackend(OrderingFilter, DjangoFilterBackend):
 
             return q
         else:
-            return super(ElasticsearchFilterBackend, self).filter_queryset(
+            return super().filter_queryset(
                 request, queryset, view
             )
 
 
-class IndexableModelMixin(object):
+class IndexableModelMixin:
     """
     Use EsQueryset and ElasticsearchFilterBackend if available
     """
-    filter_backends = [ElasticsearchFilterBackend,]
+    filter_backends = [ElasticsearchFilterBackend, ]
     FILTER_STATUS_MESSAGE_OK = 'Ok'
     FILTER_STATUS_MESSAGE_FAILED = 'Failed'
 
     def __init__(self, *args, **kwargs):
         self.es_failed = False
-        super(IndexableModelMixin, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def get_object(self):
         try:
-            return super(IndexableModelMixin, self).get_object()
+            return super().get_object()
         except NotFoundError:
             raise Http404
 
@@ -85,31 +83,29 @@ class IndexableModelMixin(object):
                 queryset = backend().filter_queryset(self.request, queryset, self)
             return queryset
         else:
-            return super(IndexableModelMixin, self).filter_queryset(queryset)
+            return super().filter_queryset(queryset)
 
     def dispatch(self, request, *args, **kwargs):
         try:
-            r = super(IndexableModelMixin, self).dispatch(request, *args, **kwargs)
+            r = super().dispatch(request, *args, **kwargs)
         except (ConnectionError, TransportError) as e:
             # reset object list
             self.queryset = None
             self.es_failed = True
             # db fallback
-            r = super(IndexableModelMixin, self).dispatch(request, *args, **kwargs)
+            r = super().dispatch(request, *args, **kwargs)
             if settings.DEBUG and isinstance(r.data, dict):
                 r.data["filter_fail_cause"] = str(e)
 
         # Add a failed message in case something went wrong with elasticsearch
         # for example if the cluster went down.
         if isinstance(r.data, dict) and self.action in ['list', 'retrieve']:
-            r.data['filter_status'] = (self.es_failed
-                                       and self.FILTER_STATUS_MESSAGE_FAILED
-                                       or self.FILTER_STATUS_MESSAGE_OK)
+            r.data['filter_status'] = (self.FILTER_STATUS_MESSAGE_FAILED if self.es_failed else self.FILTER_STATUS_MESSAGE_OK)
         return r
 
     def list(self, request, *args, **kwargs):
         if self.es_failed:
-            return super(IndexableModelMixin, self).list(request, *args, **kwargs)
+            return super().list(request, *args, **kwargs)
         else:
             # bypass serialization
             queryset = self.filter_queryset(self.get_queryset())

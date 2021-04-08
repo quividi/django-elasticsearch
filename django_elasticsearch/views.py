@@ -21,11 +21,11 @@ class ElasticsearchView(View):
 
     def __init__(self, *args, **kwargs):
         self.es_failed = False
-        super(ElasticsearchView, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def get_queryset(self):
         if self.es_failed:
-            return super(ElasticsearchView, self).get_queryset()
+            return super().get_queryset()
         else:
             return self.es_queryset or self.model.es.all().deserialize()
 
@@ -36,15 +36,15 @@ class ElasticsearchListView(ElasticsearchView, BaseListView):
         if self.es_failed:
             return None
         else:
-            return super(ElasticsearchListView, self).get_paginate_by(*args, **kwargs)
+            return super().get_paginate_by(*args, **kwargs)
 
     def get(self, request, *args, **kwargs):
         try:
-            return super(ElasticsearchListView, self).get(request, *args, **kwargs)
+            return super().get(request, *args, **kwargs)
         except (TransportError, ConnectionError):
             self.es_failed = True
             if self.db_fallback:
-                return super(ElasticsearchListView, self).get(request, *args, **kwargs)
+                return super().get(request, *args, **kwargs)
             else:
                 raise
 
@@ -52,16 +52,16 @@ class ElasticsearchListView(ElasticsearchView, BaseListView):
 class ElasticsearchDetailView(ElasticsearchView, BaseDetailView):
     def get_object(self, queryset=None):
         try:
-            return super(ElasticsearchDetailView, self).get_object(queryset=queryset)
+            return super().get_object(queryset=queryset)
         except NotFoundError:
             raise Http404
 
     def get(self, request, *args, **kwargs):
         try:
-            return super(ElasticsearchDetailView, self).get(request, *args, **kwargs)
+            return super().get(request, *args, **kwargs)
         except (TransportError, ConnectionError):
             self.es_failed = True
             if self.db_fallback:
-                return super(ElasticsearchDetailView, self).get(request, *args, **kwargs)
+                return super().get(request, *args, **kwargs)
             else:
                 raise

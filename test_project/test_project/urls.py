@@ -9,7 +9,9 @@ urlpatterns = [
     url(r'^', include('test_app.urls')),
 ]
 
+
 def custom404(request):
     return HttpResponseNotFound(status=404)
+
 
 handler404 = 'test_project.urls.custom404'

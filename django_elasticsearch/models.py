@@ -2,17 +2,13 @@
 from django import get_version
 from django.conf import settings
 from django.db.models import Model
-from django.db.models.signals import post_save, post_delete
-try:
-    from django.db.models.signals import post_migrate
-except ImportError:  # django <= 1.6
-    from django.db.models.signals import post_syncdb as post_migrate
+from django.db.models.signals import (
+    class_prepared,
+    post_delete,
+    post_migrate,
+    post_save,
+)
 
-from django.db.models.signals import class_prepared
-try:
-    from django.db.models.signals import post_migrate
-except ImportError:  # django <= 1.6
-    from django.db.models.signals import post_syncdb as post_migrate
 
 from django_elasticsearch.serializers import EsJsonSerializer
 from django_elasticsearch.managers import ElasticsearchManager
@@ -39,7 +35,7 @@ class EsIndexable(Model):
         completion_fields = None
 
     def __init__(self, *args, **kwargs):
-        super(EsIndexable, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         # override the manager because we have an instance now
         self.es = ElasticsearchManager(self)
 
@@ -51,17 +47,19 @@ class EsIndexable(Model):
 
     def save(self, *args, **kwargs):
         self._raise_no_db_operation()
-        super(EsIndexable, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         self._raise_no_db_operation()
-        super(EsIndexable, self).delete(*args, **kwargs)
+        super().delete(*args, **kwargs)
 
 
 def add_es_manager(sender, **kwargs):
     # Note: the manager needs to know the subclass
     if issubclass(sender, EsIndexable):
         sender.es = ElasticsearchManager(sender)
+
+
 class_prepared.connect(add_es_manager)
 
 
@@ -78,12 +76,14 @@ def es_delete_callback(sender, instance, **kwargs):
     instance.es.delete()
 
 
-def es_syncdb_callback(sender, app=None, created_models=[], **kwargs):
+def es_syncdb_callback(sender, app=None, created_models=None, **kwargs):
+    if not created_models:
+        created_models = list()
     if int(get_version()[2]) > 6:
         models = sender.get_models()
     else:
         models = created_models
-    
+
     for model in models:
         if issubclass(model, EsIndexable):
             model.es.create_index()

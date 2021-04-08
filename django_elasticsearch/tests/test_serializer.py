@@ -1,8 +1,3 @@
-
-from __future__ import absolute_import
-
-import six
-
 from django.test import TestCase
 
 from django_elasticsearch.utils import dict_depth
@@ -34,18 +29,18 @@ class EsJsonSerializerTestCase(TestCase):
         Test2Model.es.do_update()
 
     def tearDown(self):
-        super(EsJsonSerializerTestCase, self).tearDown()
+        super().tearDown()
         es_client.indices.delete(index=Test2Model.es.get_index())
 
     def test_serialize(self):
         obj = self.instance.es.serialize()
-        self.assertTrue(isinstance(obj, six.string_types))
+        self.assertTrue(isinstance(obj, str))
 
     @withattrs(Test2Model.Elasticsearch, 'serializer_class',
                'django_elasticsearch.serializers.EsJsonSerializer')
     def test_dynamic_serializer_import(self):
         obj = self.instance.es.serialize()
-        self.assertTrue(isinstance(obj, six.string_types))
+        self.assertTrue(isinstance(obj, str))
 
     def test_deserialize(self):
         instance = Test2Model.es.deserialize({'char': 'test'})
@@ -61,15 +56,15 @@ class EsJsonSerializerTestCase(TestCase):
         # if the target model got a Elasticsearch.serializer, we use it
         u = Test2Model.es.all()[0]
         self.assertTrue('fk' in u)
-        self.assertTrue(type(u['fk']) is dict)
+        self.assertTrue(isinstance(u['fk'], dict))
 
     def test_nested_oto(self):
         # if the target model got a Elasticsearch.serializer, we use it
         u = Test2Model.es.all()[0]
         self.assertTrue('oto' in u)
-        self.assertTrue(type(u['oto']) is dict)
+        self.assertTrue(isinstance(u['oto'], dict))
 
-    @withattrs(Test2Model.Elasticsearch, 'fields', ['fkself',])
+    @withattrs(Test2Model.Elasticsearch, 'fields', ['fkself', ])
     def test_self_fk_depth_test(self):
         Test2Model.es.serializer = None  # reset cache
         serializer = Test2Model.es.get_serializer(max_depth=3)
@@ -79,7 +74,7 @@ class EsJsonSerializerTestCase(TestCase):
     def test_nested_m2m(self):
         u = Test2Model.es.all()[0]
         self.assertTrue('mtm' in u)
-        self.assertTrue(type(u['mtm']) is list)
+        self.assertTrue(isinstance(u['mtm'], list))
 
     @withattrs(Test2Model.Elasticsearch, 'fields', ['abstract_prop', 'abstract_method'])
     def test_abstract_field(self):
@@ -88,7 +83,7 @@ class EsJsonSerializerTestCase(TestCase):
         expected = {'abstract_method': 'woot', 'abstract_prop': 'weez'}
         self.assertEqual(obj, expected)
 
-    @withattrs(Test2Model.Elasticsearch, 'fields', ['foo',])
+    @withattrs(Test2Model.Elasticsearch, 'fields', ['foo', ])
     def test_unknown_field(self):
         with self.assertRaises(AttributeError):
             self.instance.es.serialize()
@@ -104,12 +99,12 @@ class EsJsonSerializerTestCase(TestCase):
     def test_type_specific_field_method(self):
         serializer = Test2Model.es.get_serializer()
         obj = serializer.format(self.instance)
-        self.assertTrue(type(obj["datetf"]) is dict)
+        self.assertTrue(isinstance(obj["datetf"], dict))
 
         instance = Test2Model.es.deserialize({"datetf": obj["datetf"]})
         self.assertEqual(instance.datetf, self.instance.datetf)
 
     @withattrs(Test2Model.Elasticsearch, 'serializer_class', EsSimpleJsonSerializer)
     def test_simple_serializer(self):
-        results = Test2Model.es.deserialize([{'id': self.instance.pk},])
+        results = Test2Model.es.deserialize([{'id': self.instance.pk}, ])
         self.assertTrue(self.instance in results)

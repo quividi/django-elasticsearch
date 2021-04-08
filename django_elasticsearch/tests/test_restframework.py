@@ -46,7 +46,7 @@ class EsRestFrameworkTestCase(TestCase):
         self.fake_view.action = 'list'
 
     def tearDown(self):
-        super(EsRestFrameworkTestCase, self).tearDown()
+        super().tearDown()
         es_client.indices.delete(index=TestModel.es.get_index())
 
     def _test_filter_backend(self):
@@ -54,10 +54,10 @@ class EsRestFrameworkTestCase(TestCase):
         filter_backend = ElasticsearchFilterBackend()
         queryset = filter_backend.filter_queryset(self.fake_request, queryset, self.fake_view)
 
-        l = queryset.deserialize()
-        self.assertTrue(self.model1 in l)
-        self.assertTrue(self.model2 in l)
-        self.assertFalse(self.model3 in l)
+        x = queryset.deserialize()
+        self.assertTrue(self.model1 in x)
+        self.assertTrue(self.model2 in x)
+        self.assertFalse(self.model3 in x)
 
     def test_filter_backend(self):
         self._test_filter_backend()
@@ -99,14 +99,14 @@ class EsRestFrameworkTestCase(TestCase):
         self.assertEqual(r.status_code, 404)
 
     def _test_pagination(self):
-        r = self.client.get('/rf/tests/', {'ordering': '-id', 'page': 2, 'page_size':1})
+        r = self.client.get('/rf/tests/', {'ordering': '-id', 'page': 2, 'page_size': 1})
         self.assertEqual(r.data['count'], 3)
         self.assertEqual(r.data['results'][0]['id'], self.model2.id)
 
     def test_pagination(self):
         self._test_pagination()
 
-    @withattrs(TestModel.Elasticsearch, 'facets_fields', ['first_name',])
+    @withattrs(TestModel.Elasticsearch, 'facets_fields', ['first_name', ])
     def test_facets(self):
         queryset = TestModel.es.all()
         filter_backend = ElasticsearchFilterBackend()
@@ -115,7 +115,7 @@ class EsRestFrameworkTestCase(TestCase):
         self.assertEqual(s.facets['doc_count'], 3)
         self.assertEqual(s.facets['first_name']['buckets'], expected)
 
-    @withattrs(TestModel.Elasticsearch, 'facets_fields', ['first_name',])
+    @withattrs(TestModel.Elasticsearch, 'facets_fields', ['first_name', ])
     def test_faceted_viewset(self):
         r = self.client.get('/rf/tests/', {'q': 'test'})
         self.assertTrue('facets' in r.data)
@@ -167,7 +167,7 @@ class EsRestFrameworkTestCase(TestCase):
 
     def test_fallback_gracefully(self):
         # Note: can't use override settings because of how restframework handle settings :(
-        #from django_elasticsearch.tests.urls import TestViewSet
+        # from django_elasticsearch.tests.urls import TestViewSet
         from rest_framework.filters import DjangoFilterBackend, OrderingFilter
         from rest_framework.settings import api_settings
 

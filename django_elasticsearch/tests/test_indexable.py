@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from elasticsearch import NotFoundError
 
+from django import get_version
 from django.test import TestCase
 from django.test.utils import override_settings
 
@@ -8,8 +9,6 @@ from django_elasticsearch.managers import es_client
 from django_elasticsearch.tests.utils import withattrs
 
 from test_app.models import TestModel
-
-from django import get_version
 
 
 class EsIndexableTestCase(TestCase):
@@ -23,7 +22,7 @@ class EsIndexableTestCase(TestCase):
         TestModel.es.do_update()
 
     def tearDown(self):
-        super(EsIndexableTestCase, self).tearDown()
+        super().tearDown()
         es_client.indices.delete(index=TestModel.es.get_index())
 
     def test_needs_instance(self):
@@ -52,14 +51,14 @@ class EsIndexableTestCase(TestCase):
             self.instance.es.get()
 
     def test_mlt(self):
-        qs = self.instance.es.mlt(mlt_fields=['first_name',], min_term_freq=1, min_doc_freq=1)
+        qs = self.instance.es.mlt(mlt_fields=['first_name', ], min_term_freq=1, min_doc_freq=1)
         self.assertEqual(qs.count(), 0)
 
         a = TestModel.objects.create(username=u"2", first_name=u"woot", last_name=u"foo fooo")
         a.es.do_index()
         a.es.do_update()
 
-        results = self.instance.es.mlt(mlt_fields=['first_name',], min_term_freq=1, min_doc_freq=1).deserialize()
+        results = self.instance.es.mlt(mlt_fields=['first_name', ], min_term_freq=1, min_doc_freq=1).deserialize()
         self.assertEqual(results.count(), 1)
         self.assertEqual(results[0], a)
 
@@ -71,7 +70,7 @@ class EsIndexableTestCase(TestCase):
         self.assertEqual(hits.count(), 1)
 
     def test_search_with_facets(self):
-        s = TestModel.es.search('whatever').facet(['first_name',])
+        s = TestModel.es.search('whatever').facet(['first_name', ])
         self.assertEqual(s.count(), 0)
         expected = [{u'doc_count': 1, u'key': u'woot'}]
         self.assertEqual(s.facets['doc_count'], 1)
@@ -171,8 +170,8 @@ class EsIndexableTestCase(TestCase):
 
         expected = {
             u'first_name': {
-            'es': u'woot',
-            'db': u'pouet'
+                'es': u'woot',
+                'db': u'pouet'
             }
         }
 
@@ -190,34 +189,23 @@ class EsAutoIndexTestCase(TestCase):
     """
 
     def setUp(self):
-        from django.db.models.signals import post_save, post_delete
-        try:
-            from django.db.models.signals import post_migrate
-        except ImportError:  # django <= 1.6
-            from django.db.models.signals import post_syncdb as post_migrate
+        from django.db.models.signals import post_save, post_delete, post_migrate
 
-        from django_elasticsearch.models import es_save_callback
-        from django_elasticsearch.models import es_delete_callback
-        from django_elasticsearch.models import es_syncdb_callback
-        try:
-            from django.apps import apps
-            app = apps.get_app_config('django_elasticsearch')
-        except ImportError: # django 1.4
-            from django.db.models import get_app
-            app = get_app('django_elasticsearch')
+        from django_elasticsearch.models import es_save_callback, es_delete_callback, es_syncdb_callback
+        from django.apps import apps
+        app = apps.get_app_config('django_elasticsearch')
 
         post_save.connect(es_save_callback)
         post_delete.connect(es_delete_callback)
         post_migrate.connect(es_syncdb_callback)
-        
+
         if int(get_version()[2]) >= 6:
             sender = app
         else:
             sender = None
         post_migrate.send(sender=sender,
                           app_config=app,
-                          app=app,  # django 1.4
-                          created_models=[TestModel,],
+                          created_models=[TestModel, ],
                           verbosity=2)
 
         self.instance = TestModel.objects.create(username=u"1",

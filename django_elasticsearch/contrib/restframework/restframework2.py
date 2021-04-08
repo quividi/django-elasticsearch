@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-
-import six
-
 from django.http import Http404
 from django.conf import settings
 from django.core.paginator import Page
@@ -26,7 +22,7 @@ class ElasticsearchPaginationSerializer(PaginationSerializer):
     @property
     def data(self):
         if self._data is None:
-            if type(self.object) is Page:
+            if isinstance(self.object, Page):
                 page = self.object
                 self._data = {
                     'count': page.paginator.count,
@@ -35,7 +31,7 @@ class ElasticsearchPaginationSerializer(PaginationSerializer):
                     'results': page.object_list
                 }
 
-        return super(ElasticsearchPaginationSerializer, self).data
+        return super().data
 
 
 class FakeSerializer(BaseSerializer):
@@ -45,8 +41,8 @@ class FakeSerializer(BaseSerializer):
 
     @property
     def data(self):
-        self._data = super(FakeSerializer, self).data
-        if type(self._data) == list:  # better way ?
+        self._data = super().data
+        if isinstance(self._data, list):  # better way ?
             self._data = {
                 'count': self.object.count(),
                 'results': self._data
@@ -76,9 +72,11 @@ class ElasticsearchFilterBackend(OrderingFilter, DjangoFilterBackend):
                 ordering = self.get_default_ordering(view)
 
             filterable = getattr(view, 'filter_fields', [])
-            filters = dict([(k, v)
-                            for k, v in six.iteritems(request.GET)
-                            if k in filterable])
+            filters = {
+                k: v
+                for k, v in request.GET.items()
+                if k in filterable
+            }
 
             q = queryset.query(query).filter(**filters)
             if ordering:
@@ -86,26 +84,26 @@ class ElasticsearchFilterBackend(OrderingFilter, DjangoFilterBackend):
 
             return q
         else:
-            return super(ElasticsearchFilterBackend, self).filter_queryset(
+            return super().filter_queryset(
                 request, queryset, view
             )
 
 
-class IndexableModelMixin(object):
+class IndexableModelMixin:
     """
     Use EsQueryset and ElasticsearchFilterBackend if available
     """
-    filter_backends = [ElasticsearchFilterBackend,]
+    filter_backends = [ElasticsearchFilterBackend, ]
     FILTER_STATUS_MESSAGE_OK = 'Ok'
     FILTER_STATUS_MESSAGE_FAILED = 'Failed'
 
     def __init__(self, *args, **kwargs):
         self.es_failed = False
-        super(IndexableModelMixin, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def get_object(self):
         try:
-            return super(IndexableModelMixin, self).get_object()
+            return super().get_object()
         except NotFoundError:
             raise Http404
 
@@ -113,19 +111,19 @@ class IndexableModelMixin(object):
         if self.action in ['list', 'retrieve'] and not self.es_failed:
             # let's return the elasticsearch response as it is.
             return FakeSerializer
-        return super(IndexableModelMixin, self).get_serializer_class()
+        return super().get_serializer_class()
 
     def get_pagination_serializer(self, page):
         if not self.es_failed:
             context = self.get_serializer_context()
             return ElasticsearchPaginationSerializer(instance=page, context=context)
-        return super(IndexableModelMixin, self).get_pagination_serializer(page)
+        return super().get_pagination_serializer(page)
 
     def get_queryset(self):
         if self.action in ['list', 'retrieve'] and not self.es_failed:
             return self.model.es.search("")
         # db fallback
-        return super(IndexableModelMixin, self).get_queryset()
+        return super().get_queryset()
 
     def filter_queryset(self, queryset):
         if self.es_failed:
@@ -133,10 +131,10 @@ class IndexableModelMixin(object):
                 queryset = backend().filter_queryset(self.request, queryset, self)
             return queryset
         else:
-            return super(IndexableModelMixin, self).filter_queryset(queryset)
+            return super().filter_queryset(queryset)
 
     def list(self, request, *args, **kwargs):
-        r = super(IndexableModelMixin, self).list(request, *args, **kwargs)
+        r = super().list(request, *args, **kwargs)
         if not self.es_failed:
             if getattr(self.object_list, 'facets', None):
                 r.data['facets'] = self.object_list.facets
@@ -148,20 +146,18 @@ class IndexableModelMixin(object):
 
     def dispatch(self, request, *args, **kwargs):
         try:
-            r = super(IndexableModelMixin, self).dispatch(request, *args, **kwargs)
+            r = super().dispatch(request, *args, **kwargs)
         except (ConnectionError, TransportError) as e:
             # reset object list
             self.queryset = None
             self.es_failed = True
             # db fallback
-            r = super(IndexableModelMixin, self).dispatch(request, *args, **kwargs)
+            r = super().dispatch(request, *args, **kwargs)
             if settings.DEBUG and isinstance(r.data, dict):
                 r.data["filter_fail_cause"] = str(e)
 
         # Add a failed message in case something went wrong with elasticsearch
         # for example if the cluster went down.
         if isinstance(r.data, dict) and self.action in ['list', 'retrieve']:
-            r.data['filter_status'] = (self.es_failed
-                                       and self.FILTER_STATUS_MESSAGE_FAILED
-                                       or self.FILTER_STATUS_MESSAGE_OK)
+            r.data['filter_status'] = (self.FILTER_STATUS_MESSAGE_FAILED if self.es_failed else self.FILTER_STATUS_MESSAGE_OK)
         return r
