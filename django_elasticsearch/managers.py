@@ -68,14 +68,6 @@ class ElasticsearchManager():
     def index(self):
         return self.get_index()
 
-    def get_doc_type(self):
-        return (self.model.Elasticsearch.doc_type
-                or 'model-{0}'.format(self.model.__name__))
-
-    @property
-    def doc_type(self):
-        return self.get_doc_type()
-
     def check_cluster(self):
         return es_client.ping()
 
@@ -117,14 +109,12 @@ class ElasticsearchManager():
     def do_index(self):
         body = self.serialize()
         es_client.index(index=self.index,
-                        doc_type=self.doc_type,
                         id=self.instance.id,
                         body=body)
 
     @needs_instance
     def delete(self):
         es_client.delete(index=self.index,
-                         doc_type=self.doc_type,
                          id=self.instance.id,
                          ignore=404)
 
@@ -150,9 +140,6 @@ class ElasticsearchManager():
 
         See es_client.mlt for all available kwargs
         :arg index: The name of the index * defaults to self.index *
-        :arg doc_type: The type of the document (use `_all` to fetch the first
-                       document matching the ID across all types)
-                       * Defaults to self.doc_type *
         :arg include: Whether to include the queried document from the response
                       * defaults to False *
         :arg mlt_fields: Specific fields to perform the query against
@@ -279,17 +266,14 @@ class ElasticsearchManager():
             mappings[complete_name] = {"type": "completion"}
 
         return {
-            self.doc_type: {
-                "properties": mappings
-            }
+            "properties": mappings
         }
 
     def get_mapping(self):
         if self._mapping is None:
-            # TODO: could be done once for every index/doc_type ?
-            full_mapping = es_client.indices.get_mapping(index=self.index,
-                                                         doc_type=self.doc_type)
-            self._mapping = full_mapping[self.index]['mappings'][self.doc_type].get('properties', {})
+            # TODO: could be done once for every index ?
+            full_mapping = es_client.indices.get_mapping(index=self.index)
+            self._mapping = full_mapping[self.index]['mappings'].get('properties', {})
 
         return self._mapping
 
@@ -333,7 +317,6 @@ class ElasticsearchManager():
                                  body=body,
                                  ignore=ignore and 400)
         es_client.indices.put_mapping(index=self.index,
-                                      doc_type=self.doc_type,
                                       body=self.make_mapping())
 
     def reindex_all(self, queryset=None):
@@ -343,7 +326,6 @@ class ElasticsearchManager():
 
     def flush(self):
         es_client.indices.delete_mapping(index=self.index,
-                                         doc_type=self.doc_type,
                                          ignore=404)
         self.create_index()
         self.reindex_all()

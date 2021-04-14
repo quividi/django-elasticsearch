@@ -1,4 +1,4 @@
-django_elasticsearch is a wrapper around py-elasticsearch that automates the indexation and search of django models.  
+django_elasticsearch is a wrapper around py-elasticsearch that automates the indexation and search of django models.
 **Note**: if your elasticsearch documents/mappings are not close to django models, this package is probably not for you.
 
 INSTALL
@@ -54,7 +54,7 @@ Then you can do:
 >>> MyModel.es.get(id=1)
 {'id': 1, 'foo': 'A value'}
 ```
-The elasticsearch manager methods (all, search, mlt) returns an instance of a EsQueryset, it's like a django Queryset but it queries elasticsearch instead of your db.  
+The elasticsearch manager methods (all, search, mlt) returns an instance of a EsQueryset, it's like a django Queryset but it queries elasticsearch instead of your db.
 Like a regular Queryset, an EsQueryset is lazy, and if evaluated, returns a list of documents. The ```.deserialize()``` method makes the queryset return instances of models instead of dicts.
 
 > django-elasticsearch **DOES NOT** index documents by itself unless told to, either set settings.ELASTICSEARCH_AUTO_INDEX to True to index your models when you save them, or call directly myinstance.es.do_index().
@@ -73,29 +73,29 @@ CONFIGURATION
 Project scope configuration (django settings):
 ----------------------------------------------
 
-* **ELASTICSEARCH_URL**  
-    Defaults to 'http://localhost:9200'  
+* **ELASTICSEARCH_URL**
+    Defaults to 'http://localhost:9200'
     The url of your elasticsearch cluster/instance.
 
-* **ELASTICSEARCH_AUTO_INDEX**  
-    Defaults to False  
+* **ELASTICSEARCH_AUTO_INDEX**
+    Defaults to False
     Set to True if you **don't** want to handle the elasticsearch operations yourself. In that case the creation of the index, the indexation and deletions are hooked respectively to the post_syncdb, post_save and post_delete signals.     Should probably only be used in a dev environment or for small scale databases.
     If you have already done a syncdb, you can just call ```MyModel.es.create_index()``` to create the index/mapping.
 
-* **ELASTICSEARCH_DEFAULT_INDEX**  
-    Defaults to 'django'  
+* **ELASTICSEARCH_DEFAULT_INDEX**
+    Defaults to 'django'
     The default index name used for every document, can be overrided for a model with the ```model.Meta.Elasticsearch.index``` attribute.
 
-* **ELASTICSEARCH_SETTINGS**  
-    No defaults  
+* **ELASTICSEARCH_SETTINGS**
+    No defaults
     If set, will be passed when creating any index [as is](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/indices-create-index.html#create-index-settings).
 
-* **ELASTICSEARCH_FUZZINESS**  
-    Defaults to 0.5  
+* **ELASTICSEARCH_FUZZINESS**
+    Defaults to 0.5
     Will be applied to any es.search query, See the [fuzziness section](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/common-options.html#fuzziness) of the elasticsearch documentation.
 
-* **ELASTICSEARCH_CONNECTION_KWARGS**  
-    Defaults to {}  
+* **ELASTICSEARCH_CONNECTION_KWARGS**
+    Defaults to {}
     Additional kwargs to be passed to at the instantiation of the elasticsearch client. Useful to manage HTTPS connection for example ([Reference](http://elasticsearch-py.readthedocs.org/en/master/api.html#elasticsearch.Elasticsearch)).
 
 Model scope configuration:
@@ -103,55 +103,51 @@ Model scope configuration:
 
 Each EsIndexable model receive an Elasticsearch class that contains its options (just like the Model.Meta class).
 
-* **index**  
-    Defaults to 'django'  
+* **index**
+    Defaults to 'django'
     The elasticsearch index in which this model(document type) will be indexed.
 
-* **doc_type**  
-    Defaults to 'model-{model_name}'  
-    The elasticsearch type in which this model will be indexed.
-
-* **fields**  
-    Defaults to None  
+* **fields**
+    Defaults to None
     The fields to be indexed by elasticsearch, if left to None, all models fields will be indexed.
 
-* **mappings**  
-    Defaults to None  
+* **mappings**
+    Defaults to None
     You can override some or all of the fields mapping with this dictionary
-    Example:  
-    
+    Example:
+
     ```python
 
     MyModel(EsIndexable, models.Model):
         title = models.CharField(max_length=64)
-        
+
         class Elasticsearch(EsIndexable.Elasticsearch):
             mappings = {'title': {'boost': 2.0}}
     ```
     In this example we only override the 'boost' attribute of the 'title' field, but there are plenty of possible configurations, see [the docs](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/indices-put-mapping.html).
 
-* **serializer_class**  
-    Defaults to EsJsonSerializer  
+* **serializer_class**
+    Defaults to EsJsonSerializer
     This is the class used to translate from the django model to elasticsearch document both ways.
 
-* **facets_fields**  
-    Defaults to None  
+* **facets_fields**
+    Defaults to None
     Can be set to a list of fields to return as facets when doing a search query on the model, if not set explicitly in the query itself.
 
-* **facets_limits**  
-    Defaults to None  
+* **facets_limits**
+    Defaults to None
     The maximum number of facets to return per query, if None, use the elasticsearch setting.
 
-* **suggest_fields**  
-    Defaults to None  
+* **suggest_fields**
+    Defaults to None
     A dictionary of fields to add in the suggestions, if not set at a search level.
 
-* **suggest_limit**  
-    Defaults to None  
+* **suggest_limit**
+    Defaults to None
     The maximum number of suggestions to return, if None, use the elasticsearch setting.
 
-* **completion_fields**  
-    Defaults to None  
+* **completion_fields**
+    Defaults to None
     The fields on which to activate auto-completion (needs a specific mapping).
 
 API
@@ -160,9 +156,9 @@ API
 EsIndexable API:
 ----------------
 
-The Elasticsearch manager is available from the 'es' attribute of EsIndexable Model classes or instances. Some methods requires an instance though.  
+The Elasticsearch manager is available from the 'es' attribute of EsIndexable Model classes or instances. Some methods requires an instance though.
 
-**Manager methods that returns a EsQueryset instance**  
+**Manager methods that returns a EsQueryset instance**
 
 * **es.search**(query,
             facets=None,
@@ -170,63 +166,63 @@ The Elasticsearch manager is available from the 'es' attribute of EsIndexable Mo
             global_facets=True,
             suggest_fields=None,
             suggest_limit=None,
-            fuzziness=None)  
-    Returns a configured EsQueryset with the given options, or the defaults set in ```EsIndexable.Elasticsearch```.  
-  
-* **es.all**()  
+            fuzziness=None)
+    Returns a configured EsQueryset with the given options, or the defaults set in ```EsIndexable.Elasticsearch```.
+
+* **es.all**()
     Proxy to an empty query ```.search("")```.
-  
-* **es.mlt** *needs_instance*  
+
+* **es.mlt** *needs_instance*
     Returns an EsQueryset of documents that are 'like' the given instance's document. See the [more like this api](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-more-like-this.html).
 
-**Other Manager methods**  
-* **es.count**()  
-    Returns the number of documents in the model's doc_type.
-  
-* **es.get**() *needs_instance*  
+**Other Manager methods**
+* **es.count**()
+    Returns the number of documents.
+
+* **es.get**() *needs_instance*
     Returns the elasticsearch document of the model instance.
-  
-* **es.delete**() *needs_instance*  
+
+* **es.delete**() *needs_instance*
     Delete the given instance's document.
-  
-* **es.do_index**() *needs_instance*  
+
+* **es.do_index**() *needs_instance*
     Serialize and index the given instance.
-  
-* **es.complete**(field_name, query)  
+
+* **es.complete**(field_name, query)
     Returns a list of suggestions from elasticsearch for the given field and query.
-    **Note**: field_name must be present in ```Elasticsearch.completion_fields``` because it needs a specific mapping. 
+    **Note**: field_name must be present in ```Elasticsearch.completion_fields``` because it needs a specific mapping.
     Example:
     ```
     >>>MyModel.es.complete('title', 'tset')
     ['test',]
     ```
-  
-* **es.do_update**()  
+
+* **es.do_update**()
     Refresh the whole index of the model. This should probably be only used in a TestCase. See the [refresh api](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/indices-refresh.html).
-  
-* **es.get_mapping**()  
+
+* **es.get_mapping**()
     Returns the current mapping for the model's document type.
-  
-* **es.get_settings**()  
+
+* **es.get_settings**()
     Returns the current settings for the model's index.
-  
-* **es.diff**()  
+
+* **es.diff**()
     Returns a dict containing differences between the db instance and the elasticsearch instance.
-  
-* **es.check_cluster**()  
+
+* **es.check_cluster**()
     Returns True if the elasticsearch cluster is alive.
-  
-* **es.reindex_all**(queryset=None)  
-    queryset defaults to ```self.model.objects.all()```   
+
+* **es.reindex_all**(queryset=None)
+    queryset defaults to ```self.model.objects.all()```
     Calls ```es.do_index()``` for every instance in queryset.
-  
-* **es.flush**()  
+
+* **es.flush**()
     Deletes the model's index and then reindex all instances of it.
 
 
 EsQueryset API:
 ---------------
-This class is as close as possible to a standard relational db Queryset, however the db operations (update and delete) are deactivated (i'm open for discussion on if and how to implement these). Note that just like regular Querysets, EsQuerysets are lazy, they can be ordered, filtered and faceted.  
+This class is as close as possible to a standard relational db Queryset, however the db operations (update and delete) are deactivated (i'm open for discussion on if and how to implement these). Note that just like regular Querysets, EsQuerysets are lazy, they can be ordered, filtered and faceted.
 
 Note that the return value of the queryset is higly dependent on your mapping, for example, if you want to be able to do an exact filtering on a string with filter() you need a field with {"index" : "not_analyzed"}.
 
@@ -256,26 +252,26 @@ To access the facets you can use the facets property of the EsQueryset:
 Note that es.search automatically add the default facets set on the model to the query, but you can also set them manually with the ```facets``` and ```facets_limit``` parameters.
 
 **Available methods** all of those are chainable.
-* **es.queryset.search**(query)  
-  
-* **es.queryset.all**()  
-  
-* **es.queryset.facet**(fields, limit=None, use_globals=True)  
+* **es.queryset.search**(query)
+
+* **es.queryset.all**()
+
+* **es.queryset.facet**(fields, limit=None, use_globals=True)
     If ```use_globals``` is set to False, the facets will be filtered like the documents.
-  
-* **es.queryset.suggest**(fields, limit)  
+
+* **es.queryset.suggest**(fields, limit)
     Add ```fields``` for suggestions.
-  
-* **es.queryset.order_by**(**kwargs)  
-  
-* **es.queryset.filter**(**kwargs)  
-    Accepted lookups are: __exact, __should, __contains, __in, __gt, __gte, __lt, __lte, __range  
-    Just like in django, the default lookup is __exact.  
-    See the [bool query](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-bool-query.html) for a difference between __exact (which maps to 'must') and __should.  
-  
-* **es.queryset.exclude**(**kwargs)  
-  
-* **es.queryset.mlt**(id)  
+
+* **es.queryset.order_by**(**kwargs)
+
+* **es.queryset.filter**(**kwargs)
+    Accepted lookups are: __exact, __should, __contains, __in, __gt, __gte, __lt, __lte, __range
+    Just like in django, the default lookup is __exact.
+    See the [bool query](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/query-dsl-bool-query.html) for a difference between __exact (which maps to 'must') and __should.
+
+* **es.queryset.exclude**(**kwargs)
+
+* **es.queryset.mlt**(id)
     See the [more like this api](http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-more-like-this.html).
 
 * **es.queryset.deserialize**()
@@ -284,7 +280,7 @@ Note that es.search automatically add the default facets set on the model to the
 * **es.queryset.extra**(body)
     Blindly updates the elasticsearch query body with ```body``` allowing to use any non-implemented elasticsearch feature.
 
-**Does not return an EsQueryset** and thus are not chainable.  
+**Does not return an EsQueryset** and thus are not chainable.
 * **es.queryset.count**()
 
 * **es.queryset.get**(pk=X)
@@ -295,13 +291,13 @@ Note that es.search automatically add the default facets set on the model to the
 Serializer API:
 ---------------
 
-The serializer's role is to format django model instances to something indexable by elasticsearch : json. The only mandatory method for a serializer is the ```serialize(instance)``` method, deserializing is only an option.  
-  
-The default serializer does a little bit more though:  
-For each indexed fields, look for either ```serialize_{field_name}``` or ```serialize_{field_type}``` methods, and fallback on ```getattr(instance, field_name)```. Also allow naive nested serialization, by looking for an Elasticsearch class attribute on the target model class of the related field, or falling back on ```dict(id=instance.id, value=unicode(instance))```.  
-Let's look at a bit complex example:  
+The serializer's role is to format django model instances to something indexable by elasticsearch : json. The only mandatory method for a serializer is the ```serialize(instance)``` method, deserializing is only an option.
 
-my_app.models.py  
+The default serializer does a little bit more though:
+For each indexed fields, look for either ```serialize_{field_name}``` or ```serialize_{field_type}``` methods, and fallback on ```getattr(instance, field_name)```. Also allow naive nested serialization, by looking for an Elasticsearch class attribute on the target model class of the related field, or falling back on ```dict(id=instance.id, value=unicode(instance))```.
+Let's look at a bit complex example:
+
+my_app.models.py
 ```python
 from django.db import models
 from django_elasticsearch.models import EsIndexable
@@ -322,9 +318,9 @@ class MyModel(models.Model):
 
 ```
 
-Note that since ```content_length``` is an abstract field (not present in db), and ```a_date``` is serialized to a dict instead of it's default (datetime), we need to tell elasticsearch their types in the mappings attribute.  
+Note that since ```content_length``` is an abstract field (not present in db), and ```a_date``` is serialized to a dict instead of it's default (datetime), we need to tell elasticsearch their types in the mappings attribute.
 
-serializers.py  
+serializers.py
 ```python
 from django_elasticsearch.serializers import EsJsonSerializer
 
@@ -371,12 +367,12 @@ output
 CONTRIB
 =======
 
-* **restframework.ElasticsearchFilterBackend**  
-    A filter backend for [rest framework](http://www.django-rest-framework.org/) that returns a EsQueryset.  
-  
-* **restframework.FacetedListModelMixin**  
-    A viewset mixin that adds the facets to the response data in case the ElasticsearchFilterBackend was used.  
-  
+* **restframework.ElasticsearchFilterBackend**
+    A filter backend for [rest framework](http://www.django-rest-framework.org/) that returns a EsQueryset.
+
+* **restframework.FacetedListModelMixin**
+    A viewset mixin that adds the facets to the response data in case the ElasticsearchFilterBackend was used.
+
 LOGGING
 =======
 
