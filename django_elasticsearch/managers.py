@@ -313,7 +313,7 @@ class ElasticsearchManager():
         if hasattr(settings, 'ELASTICSEARCH_SETTINGS'):
             body['settings'] = settings.ELASTICSEARCH_SETTINGS
 
-        es_client.indices.create(self.index,
+        es_client.indices.create(index=self.index,
                                  body=body,
                                  ignore=ignore and 400)
         es_client.indices.put_mapping(index=self.index,
