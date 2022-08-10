@@ -264,7 +264,7 @@ class EsQueryset(QuerySet):
 
         if self.extra_body:
             body.update(self.extra_body)
-        search_params['body'] = body
+        search_params.update(body)
         self._body = body
 
         if self.mode == self.MODE_MLT:

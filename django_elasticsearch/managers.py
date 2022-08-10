@@ -314,8 +314,8 @@ class ElasticsearchManager():
             body['settings'] = settings.ELASTICSEARCH_SETTINGS
 
         es_client.indices.create(index=self.index,
-                                 body=body,
-                                 ignore=ignore and 400)
+                                 ignore=ignore and 400,
+                                 **body)
         es_client.indices.put_mapping(index=self.index,
                                       body=self.make_mapping())
 
