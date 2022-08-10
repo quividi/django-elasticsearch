@@ -1,6 +1,6 @@
 import copy
 
-from distutils.version import LooseVersion
+from packaging.version import Version
 
 from django.conf import settings
 from django.db.models import Model
@@ -122,7 +122,7 @@ class EsQueryset(QuerySet):
 
     def make_search_body(self):
         es_version = es_client.info()['version']['number']
-        legacy_mode = LooseVersion(es_version) < LooseVersion('2.0.0')
+        legacy_mode = Version(es_version) < Version('2.0.0')
 
         filtered_or_bool = 'filtered' if legacy_mode else 'bool'
         query_or_must = 'query' if legacy_mode else 'must'
