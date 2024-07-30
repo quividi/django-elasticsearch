@@ -313,9 +313,7 @@ class ElasticsearchManager():
         if hasattr(settings, 'ELASTICSEARCH_SETTINGS'):
             body['settings'] = settings.ELASTICSEARCH_SETTINGS
 
-        es_client.indices.create(index=self.index,
-                                 ignore=ignore and 400,
-                                 **body)
+        es_client.options(ignore_status=ignore and 400).indices.create(index=self.index, **body)
         es_client.indices.put_mapping(index=self.index,
                                       body=self.make_mapping())
 
